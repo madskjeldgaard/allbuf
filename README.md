@@ -25,6 +25,8 @@ Eg "buf8i4lpf" for a buffer player with 8 buffer channels and a low pass filter 
 And then if it is a variation containg a filter envelope add "e" to the end of the name
 Eg "buf2i2lpfe" for a buffer player with 2 buffer channels and a low pass filter with added envelope panned in 2 output channels.
 
+__For more information and examples, see the AllBuf help file.
+__
 ### Installation
 
 Open up SuperCollider and evaluate the following line of code:
