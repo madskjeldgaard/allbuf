@@ -148,7 +148,7 @@ AllBuf {
 						filtmsg = "Adding Low pass filter with envelope";
 						name = name ++ "lpfe";
 
-						{|in, env, cutoff=500, resonance=0.5, fenv=0.5|
+						{|in, env, cutoff=20000, resonance=0.5, fenv=0.5|
 							// Lag added to filter envelope to seperate it from amplitude envelope
 							var filterenv = env.lag2.range(1-fenv*cutoff, cutoff).clip(20.0,20000.0);
 
@@ -160,7 +160,7 @@ AllBuf {
 						filtmsg = "Adding Low pass filter";
 						name = name ++ "lpf";
 
-						{|in, env, cutoff=500, resonance=0.5|
+						{|in, env, cutoff=20000, resonance=0.5|
 							DFM1.ar(in, cutoff.clip(20.0,20000.0),  resonance,  noiselevel: 0.0)
 						}
 					}
