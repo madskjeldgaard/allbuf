@@ -24,7 +24,7 @@ AllBuf {
 		{(inchans == 1).and( outchans == 2 )} { 
 			panmsg = "Setting pan function to mono to stereo ";
 			{|sig, pan| 
-				Pan2.ar(sig, pan.linlin(0.0,1.0,-1.0,1.0)) 
+				Pan2.ar(sig, pan) 
 			}
 		}
 		{(inchans == 1).and(outchans > 2)} {
@@ -33,7 +33,7 @@ AllBuf {
 				PanAz.ar(
 					numChans: outchans, 
 					in: sig, 
-					pos: pan.linlin(0.0,1.0,-1.0,1.0),
+					pos: pan,
 					width: width, 
 					orientation: orientation
 				) 
@@ -49,13 +49,13 @@ AllBuf {
 		// {(inchans >= 2).and(outchans == 1)} {
 		// 	"Summing signal (no panning)".postln;
 		// 	{|sig, pan=0.5, focus=1, wrap=false| 
-		// 		SelectXFocus.ar(pan.linlin(0.0,1.0,-1.0,1.0),  array: sig,  focus: focus,  wrap: wrap)
+		// 		SelectXFocus.ar(pan,  array: sig,  focus: focus,  wrap: wrap)
 		// 	}
 		// }
 		{(inchans == 2).and(outchans == 2)} {
 			panmsg = "Setting pan function to stereo";
 			{|sig, pan=0.5| 
-				Balance2.ar(sig[0], sig[1], pos: pan.linlin(0.0,1.0,-1.0,1.0)) 
+				Balance2.ar(sig[0], sig[1], pos: pan) 
 			}
 		}
 		{(inchans > 2).and(outchans == 2)} {
@@ -65,7 +65,7 @@ AllBuf {
 					sig,  
 					spread: spread,  
 					level: 1,  
-					center: pan.linlin(0.0,1.0,-1.0,1.0),  
+					center: pan,  
 					levelComp: true
 				)			
 			}
@@ -80,7 +80,7 @@ AllBuf {
 					spread: spread,  
 					level: 1,  
 					width: width,  
-					center: pan.linlin(0.0,1.0,-1.0,1.0),  
+					center: pan,  
 					orientation: orientation,  
 					levelComp: true
 				)
