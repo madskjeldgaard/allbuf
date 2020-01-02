@@ -119,7 +119,7 @@ AllBuf {
 						buffer, 
 						pitchenv * BufRateScale.kr(buffer),  
 						trigger,  
-						start * BufDur.kr(buffer),  
+						start * BufFrames.kr(buffer),  
 						loop
 					)
 				}
@@ -131,7 +131,7 @@ AllBuf {
 						buffer, 
 						rate * BufRateScale.kr(buffer),  
 						trigger,  
-						start * BufDur.kr(buffer),  
+						start * BufFrames.kr(buffer),  
 						loop
 					)
 				}
