@@ -28,7 +28,7 @@ AllBuf {
 		result.postln;
 	}
 
-	name{|inchans=1, outchans=2, filterenv=true, pitchenv=true| 
+	def{|inchans=1, outchans=2, filterenv=true, pitchenv=true| 
 		var basename = "allbuf_%i_%o".format(inchans, outchans);
 
 		if(filterenv, { basename = basename ++ "_fenv" });
@@ -46,7 +46,7 @@ AllBuf {
 			filterEnv=true,
 			verbose=false;
 
-		var name = this.getNameFor(
+		var name = this.def(
 			inchans: inchans, 
 			outchans: outchans, 
 			filterenv: filterEnv, 
@@ -195,9 +195,9 @@ AllBuf {
 
 						{|in, env, cutoff=20000.0, resonance=0.5, filterenv=0.5|
 							// Lag added to filter envelope to seperate it from amplitude envelope
-							var filterenv = env.lag2.range(1-filterenv*cutoff, cutoff).clip(20.0,20000.0);
+							var fenv = env.lag2.range(1-filterenv*cutoff, cutoff).clip(20.0,20000.0);
 
-							DFM1.ar(in, filterenv,  resonance,  noiselevel: 0.0)
+							DFM1.ar(in, fenv,  resonance,  noiselevel: 0.0)
 						}
 
 					},
@@ -223,12 +223,12 @@ AllBuf {
 			{
 				{|env, buffer, rate=1, trigger=1, start=0, loop=1, pitchenv=0.5|
 					// Lag added to pitch envelope to seperate it from amplitude envelope
-					var pitchenv = env.lag.range(1-pitchenv*rate, rate);
+					var penv = env.lag.range(1-pitchenv*rate, rate);
 
 					PlayBuf.ar(
 						inchans, 
 						buffer, 
-						pitchenv * BufRateScale.kr(buffer),  
+						penv * BufRateScale.kr(buffer),  
 						trigger,  
 						start * BufFrames.kr(buffer),  
 						loop
