@@ -5,7 +5,7 @@ AllBuf {
 			^super.new.init(maxinchans, outchans, verbose)
 	}
 
-	init{|outchans, maxchansIn, verbose|
+	init{|maxchansIn, outchans, verbose|
 		inChannels = maxchansIn ? 2;
 		outChannels = outchans ? 2;
 
@@ -29,7 +29,19 @@ AllBuf {
 	}
 
 	def{|inchans=1, outchans=2, filterenv=true, pitchenv=true| 
-		var basename = "allbuf_%i_%o".format(inchans, outchans);
+		var basename;
+
+		if(inchans > inChannels, {
+			"Cannot return synthdef with % in channels.\nAllBuf was compiled with % in channels".format(inchans, inChannels).warn;
+			inchans = inChannels
+		});
+
+		if(outchans != outChannels, {
+			"Cannot return synthdef with % out channels.\nAllBuf was compiled with % out channels".format(outchans, outChannels).warn;
+			outchans = outChannels;
+		});
+
+		basename = "allbuf_%i_%o".format(inchans, outchans);
 
 		if(filterenv, { basename = basename ++ "_fenv" });
 		if(pitchenv, { basename = basename ++ "_penv" });
@@ -64,17 +76,13 @@ AllBuf {
 		verbose.if({
 			"Making SynthDef '%'".format(name).postln;
 			"inchans: %, outchans: %".format(inchans,outchans).postln;
+			"Filter envelope: %".format(filterEnv).postln;
+			"Pitch envelope: %".format(pitchEnv).postln;
 			"----------".postln;
 		});
 
 		// Make and add the SynthDef
 		SynthDef.new(name, synthfunc).add;
-	}
-
-	addToLog{|string|
-		result = result ++ "\n" ++ string;
-
-		^result
 	}
 
 	synthFunc{|inchans=1, outchans=2, lpf=true, filterEnv=true, pitchEnv=true|
@@ -95,17 +103,14 @@ AllBuf {
 	panFunc{|inchans=1, outchans=2|
 		var panfunc = case
 		{(inchans == 1).and(outchans == 1)} { 
-			this.addToLog("Setting pan function to mono (no panning)");
 			{|sig| sig }
 		}
 		{(inchans == 1).and( outchans == 2 )} { 
-			this.addToLog("Setting pan function to mono to stereo ");
 			{|sig, pan| 
 				Pan2.ar(sig, pan) 
 			}
 		}
 		{(inchans == 1).and(outchans > 2)} {
-			this.addToLog("Setting pan function to multichan (% channels)".format(outchans));
 			{|sig, pan=0.0, width=1.0, orientation=0.5| 
 				PanAz.ar(
 					numChans: outchans, 
@@ -118,7 +123,6 @@ AllBuf {
 		}
 		// Stereo in
 		{(inchans >= 2).and(outchans == 1)} {
-			this.addToLog("Summing signal (no panning)");
 			{|sig| 
 				Mix.ar(sig) // TODO: SelectXFocus ?
 			}
@@ -130,13 +134,11 @@ AllBuf {
 		// 	}
 		// }
 		{(inchans == 2).and(outchans == 2)} {
-			this.addToLog("Setting pan function to stereo");
 			{|sig, pan=0.5| 
 				Balance2.ar(sig[0], sig[1], pos: pan) 
 			}
 		}
 		{(inchans > 2).and(outchans == 2)} {
-			this.addToLog("Setting pan function to splay");
 			{|sig, pan=0.5, spread=1, width=1, orientation=0.5| 
 				Splay.ar(
 					sig,  
@@ -149,7 +151,6 @@ AllBuf {
 		}
 		// Stereo and multi chanin multi chan out
 		{(inchans >= 2).and(outchans > 2)} {
-			this.addToLog("Setting pan function to splay");
 			{|sig, pan=0.5, spread=1, width=1, orientation=0.5| 
 				SplayAz.ar(
 					outchans, 
@@ -191,7 +192,6 @@ AllBuf {
 			{
 				if(filterEnv,
 					{
-						this.addToLog("Adding Low pass filter with envelope");
 
 						{|in, env, cutoff=20000.0, resonance=0.5, filterenv=0.5|
 							// Lag added to filter envelope to seperate it from amplitude envelope
@@ -202,7 +202,6 @@ AllBuf {
 
 					},
 					{
-						this.addToLog("Adding Low pass filter");
 						{|in, env, cutoff=20000, resonance=0.5|
 							DFM1.ar(in, cutoff.clip(20.0,20000.0),  resonance,  noiselevel: 0.0)
 						}
@@ -210,7 +209,6 @@ AllBuf {
 				);
 
 			}, {
-				this.addToLog("Not adding Low pass filter");
 				{|in| in }
 			}
 		);
