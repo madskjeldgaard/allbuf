@@ -1,5 +1,5 @@
 AllBuf { 
-	var <result, <inChannels, <outChannels;
+	var <inChannels, <outChannels;
 
 	*new {|maxinchans=2, outchans=2, verbose=true|
 			^super.new.init(maxinchans, outchans, verbose)
@@ -25,10 +25,9 @@ AllBuf {
 
 		};
 
-		result.postln;
 	}
 
-	def{|inchans=1, outchans=2, filterenv=true, pitchenv=true| 
+	def{|inchans=1, filterenv=true, pitchenv=true| 
 		var basename;
 
 		if(inchans > inChannels, {
@@ -36,12 +35,12 @@ AllBuf {
 			inchans = inChannels
 		});
 
-		if(outchans != outChannels, {
-			"Cannot return synthdef with % out channels.\nAllBuf was compiled with % out channels".format(outchans, outChannels).warn;
-			outchans = outChannels;
-		});
+// 		if(outchans != outChannels, {
+// 			"Cannot return synthdef with % out channels.\nAllBuf was compiled with % out channels".format(outchans, outChannels).warn;
+// 			outchans = outChannels;
+// 		});
 
-		basename = "allbuf_%i_%o".format(inchans, outchans);
+		basename = "allbuf_%i_%o".format(inchans, outChannels);
 
 		if(filterenv, { basename = basename ++ "_fenv" });
 		if(pitchenv, { basename = basename ++ "_penv" });
@@ -60,7 +59,6 @@ AllBuf {
 
 		var name = this.def(
 			inchans: inchans, 
-			outchans: outchans, 
 			filterenv: filterEnv, 
 			pitchenv: pitchEnv
 		);
