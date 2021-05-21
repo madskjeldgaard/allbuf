@@ -35,11 +35,6 @@ AllBuf {
 			inchans = inChannels
 		});
 
-// 		if(outchans != outChannels, {
-// 			"Cannot return synthdef with % out channels.\nAllBuf was compiled with % out channels".format(outchans, outChannels).warn;
-// 			outchans = outChannels;
-// 		});
-
 		basename = "allbuf_%i_%o".format(inchans, outChannels);
 
 		if(filterenv, { basename = basename ++ "_fenv" });
@@ -84,7 +79,7 @@ AllBuf {
 	}
 
 	synthFunc{|inchans=1, outchans=2, lpf=true, filterEnv=true, pitchEnv=true|
-		var func = {|dur=1, amp=1, out=0|
+		var func = {|dur=1, amp=0.1, out=0|
 
 			var env = SynthDef.wrap(this.envFunc(), prependArgs: [dur]); 
 			var sig = SynthDef.wrap(this.bufPlayerFunc(inchans: inchans, pitchEnv: pitchEnv), prependArgs: [env]);
@@ -133,7 +128,7 @@ AllBuf {
 		// }
 		{(inchans == 2).and(outchans == 2)} {
 			{|sig, pan=0.5| 
-				Balance2.ar(sig[0], sig[1], pos: pan) 
+				Balance2.ar(sig[0], sig[1], pos: pan.poll) 
 			}
 		}
 		{(inchans > 2).and(outchans == 2)} {
@@ -247,4 +242,33 @@ AllBuf {
 
 		^bufplayerfunc
 	}
+
+	postArguments{|inchans=1, filterenv=true, pitchenv=true|
+		"SynthDef % has the following control keys:".format(this.def(inchans, filterenv, pitchenv)).postln;
+
+		this.getControlDict(inchans, filterenv, pitchenv).keysValuesDo{|key, ctrl|
+			"\t\\".post;
+			key.post;
+			", ".post;
+			ctrl.defaultValue.postln
+		}
+	}
+
+	getControls{|inchans=1, filterenv=true, pitchenv=true| 
+		^SynthDescLib.global.at(this.def(inchans, filterenv, pitchenv)).controls
+	}
+
+	getControlDict{|inchans=1, filterenv=true, pitchenv=true| 
+		^SynthDescLib.global.at(this.def(inchans, filterenv, pitchenv)).controlDict
+	}
+
+	getControlNames{|inchans=1, filterenv=true, pitchenv=true| 
+		^SynthDescLib.global.at(this.def(inchans, filterenv, pitchenv)).controlNames
+	}
+
+	// @TODO the defs still don't have specs
+	getSpecs{|inchans=1, filterenv=true, pitchenv=true| 
+		^SynthDescLib.global.at(this.def(inchans, filterenv, pitchenv)).specs
+	}
+
 }
