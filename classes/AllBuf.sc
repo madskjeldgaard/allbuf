@@ -71,11 +71,15 @@ AllBuf {
 			"inchans: %, outchans: %".format(inchans,outchans).postln;
 			"Filter envelope: %".format(filterEnv).postln;
 			"Pitch envelope: %".format(pitchEnv).postln;
-			"----------".postln;
 		});
 
 		// Make and add the SynthDef
 		SynthDef.new(name, synthfunc).add;
+
+		verbose.if({
+			this.postArguments(inchans, filterEnv, pitchEnv);
+			"----------".postln;
+		})
 	}
 
 	synthFunc{|inchans=1, outchans=2, lpf=true, filterEnv=true, pitchEnv=true|
