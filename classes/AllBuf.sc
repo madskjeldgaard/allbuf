@@ -1,3 +1,9 @@
+/*
+
+TODO:
+
+- Autopan
+*/
 AllBuf { 
 	var <inChannels, <outChannels;
 
@@ -27,7 +33,7 @@ AllBuf {
 
 	}
 
-	def{|inchans=1, filterenv=true, pitchenv=true| 
+	def{|inchans=1, filterenv=false, pitchenv=false| 
 		var basename;
 
 		if(inchans > inChannels, {
@@ -103,16 +109,19 @@ AllBuf {
 			{|sig| sig }
 		}
 		{(inchans == 1).and( outchans == 2 )} { 
-			{|sig, pan| 
-				Pan2.ar(sig, pan) 
+			{|sig, pan=0, panFreq=0.1, autopan=0, panShape=(-1.0)| 
+				var panner = AutoPan.kr(pan, panFreq, autopan, panShape);
+				Pan2.ar(sig, panner) 
 			}
 		}
 		{(inchans == 1).and(outchans > 2)} {
-			{|sig, pan=0.0, width=1.0, orientation=0.5| 
+			{|sig, width=1.0, orientation=0.5, pan=0, panFreq=0.1, autopan=0, panShape=(-1.0)| 
+				var panner = AutoPan.kr(pan, panFreq, autopan, panShape);
+ 
 				PanAz.ar(
 					numChans: outchans, 
 					in: sig, 
-					pos: pan,
+					pos: panner,
 					width: width, 
 					orientation: orientation
 				) 
@@ -131,31 +140,35 @@ AllBuf {
 		// 	}
 		// }
 		{(inchans == 2).and(outchans == 2)} {
-			{|sig, pan=0.5| 
-				Balance2.ar(sig[0], sig[1], pos: pan.poll) 
+			{|sig, pan=0, panFreq=0.1, autopan=0, panShape=(-1.0)| 
+				var panner = AutoPan.kr(pan, panFreq, autopan, panShape);
+				Balance2.ar(sig[0], sig[1], pos: panner) 
 			}
 		}
 		{(inchans > 2).and(outchans == 2)} {
-			{|sig, pan=0.5, spread=1, width=1, orientation=0.5| 
+			{|sig, spread=1, width=1, orientation=0.5, pan=0, panFreq=0.1, autopan=0, panShape=(-1.0)| 
+				var panner = AutoPan.kr(pan, panFreq, autopan, panShape);
 				Splay.ar(
 					sig,  
 					spread: spread,  
 					level: 1,  
-					center: pan,  
+					center: panner,  
 					levelComp: true
 				)			
 			}
 		}
 		// Stereo and multi chanin multi chan out
 		{(inchans >= 2).and(outchans > 2)} {
-			{|sig, pan=0.5, spread=1, width=1, orientation=0.5| 
+			{|sig, spread=1, width=1, orientation=0.5, pan=0, panFreq=0.1, autopan=0, panShape=(-1.0)| 
+				var panner = AutoPan.kr(pan, panFreq, autopan, panShape);
+
 				SplayAz.ar(
 					outchans, 
 					sig,  
 					spread: spread,  
 					level: 1,  
 					width: width,  
-					center: pan,  
+					center: panner,  
 					orientation: orientation,  
 					levelComp: true
 				)
