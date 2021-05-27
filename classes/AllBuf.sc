@@ -1,9 +1,3 @@
-/*
-
-TODO:
-
-- Autopan
-*/
 AllBuf { 
 	var <inChannels, <outChannels;
 
@@ -29,11 +23,14 @@ AllBuf {
 			// With pitch and filter and filter env
 			this.addSynth(inchan, outchans, pitchEnv: true, lpf: true, filterEnv: true, verbose: verbose);
 
+			// Simple
+			this.addSynth(inchan, outchans, pitchEnv: false, lpf: false, filterEnv: false, verbose: verbose, simple: true);
+
 		};
 
 	}
 
-	def{|inchans=1, filterenv=false, pitchenv=false| 
+	def{|inchans=1, filterenv=false, pitchenv=false, simple=false| 
 		var basename;
 
 		if(inchans > inChannels, {
@@ -45,6 +42,8 @@ AllBuf {
 
 		if(filterenv, { basename = basename ++ "_fenv" });
 		if(pitchenv, { basename = basename ++ "_penv" });
+		if(simple, { basename = basename ++ "_simple" });
+
 
 		^basename.asSymbol
 
@@ -56,12 +55,14 @@ AllBuf {
 			pitchEnv = true,
 			lpf=true,
 			filterEnv=true,
+			simple=false,
 			verbose=false;
 
 		var name = this.def(
 			inchans: inchans, 
 			filterenv: filterEnv, 
-			pitchenv: pitchEnv
+			pitchenv: pitchEnv,
+			simple: simple
 		);
 
 		var synthfunc = this.synthFunc(
@@ -69,7 +70,8 @@ AllBuf {
 			outchans: outchans, 
 			lpf: lpf, 
 			filterEnv: filterEnv, 
-			pitchEnv: pitchEnv
+			pitchEnv: pitchEnv,
+			simple: simple
 		);
 
 		verbose.if({
@@ -77,28 +79,42 @@ AllBuf {
 			"inchans: %, outchans: %".format(inchans,outchans).postln;
 			"Filter envelope: %".format(filterEnv).postln;
 			"Pitch envelope: %".format(pitchEnv).postln;
+			"Simple: %".format(simple).postln;
 		});
 
 		// Make and add the SynthDef
 		SynthDef.new(name, synthfunc).add;
 
 		verbose.if({
-			this.postArguments(inchans, filterEnv, pitchEnv);
+			this.postArguments(inchans, filterEnv, pitchEnv, simple);
 			"----------".postln;
 		})
 	}
 
-	synthFunc{|inchans=1, outchans=2, lpf=true, filterEnv=true, pitchEnv=true|
-		var func = {|dur=1, amp=0.1, out=0|
+	synthFunc{|inchans=1, outchans=2, lpf=true, filterEnv=true, pitchEnv=true, simple=false|
+		var func = if(simple, {
+			// Simple, non enveloped synth
+			// Lifetime detertmined by the PlayBuf doneaction
+			{|dur=1, amp=0.5, out=0|
+				var sig = SynthDef.wrap(this.bufPlayerFunc(inchans: inchans, pitchEnv: false), prependArgs: []);
 
-			var env = SynthDef.wrap(this.envFunc(), prependArgs: [dur]); 
-			var sig = SynthDef.wrap(this.bufPlayerFunc(inchans: inchans, pitchEnv: pitchEnv), prependArgs: [env]);
+				sig = SynthDef.wrap(this.panFunc(inchans: inchans, outchans:outchans), prependArgs:[sig]);
 
-			sig = SynthDef.wrap(this.panFunc(inchans: inchans, outchans:outchans), prependArgs:[sig]);
-			sig = SynthDef.wrap(this.filterFunc(lpf: lpf, filterEnv: filterEnv),  prependArgs: [sig, env]);
+				Out.ar(out, sig * amp);
+			}
+		}, {
+			// enveloped synth
+			{|dur=1, amp=0.5, out=0|
 
-			Out.ar(out, env * sig * amp);
-		};
+				var env = SynthDef.wrap(this.envFunc(), prependArgs: [dur]); 
+				var sig = SynthDef.wrap(this.bufPlayerFunc(inchans: inchans, pitchEnv: pitchEnv), prependArgs: [env]);
+
+				sig = SynthDef.wrap(this.panFunc(inchans: inchans, outchans:outchans), prependArgs:[sig]);
+				sig = SynthDef.wrap(this.filterFunc(lpf: lpf, filterEnv: filterEnv),  prependArgs: [sig, env]);
+
+				Out.ar(out, env * sig * amp);
+			}
+		});
 
 		^func
 	}	
@@ -229,7 +245,7 @@ AllBuf {
 	bufPlayerFunc{|inchans, pitchEnv=true|
 		var bufplayerfunc = if(pitchEnv, 
 			{
-				{|env, buffer, rate=1, trigger=1, start=0, loop=1, pitchenv=0.5|
+				{|env, buffer, rate=1, trigger=1, start=0, loop=1, pitchenv=0.5, doneAction=0|
 					// Lag added to pitch envelope to seperate it from amplitude envelope
 					var penv = env.lag.range(1-pitchenv*rate, rate);
 
@@ -239,19 +255,21 @@ AllBuf {
 						penv * BufRateScale.kr(buffer),  
 						trigger,  
 						start * BufFrames.kr(buffer),  
-						loop
+						loop,
+						doneAction: doneAction
 					)
 				}
 			},
 			{
-				{|env, buffer, rate=1, trigger=1, start=0, loop=1|
+				{|env, buffer, rate=1, trigger=1, start=0, loop=1, doneAction=0|
 					PlayBuf.ar(
 						inchans, 
 						buffer, 
 						rate * BufRateScale.kr(buffer),  
 						trigger,  
 						start * BufFrames.kr(buffer),  
-						loop
+						loop,
+						doneAction: doneAction
 					)
 				}
 			}
@@ -260,10 +278,10 @@ AllBuf {
 		^bufplayerfunc
 	}
 
-	postArguments{|inchans=1, filterenv=true, pitchenv=true|
-		"SynthDef % has the following control keys:".format(this.def(inchans, filterenv, pitchenv)).postln;
+	postArguments{|inchans=1, filterenv=true, pitchenv=true, simple=false|
+		"SynthDef % has the following control keys:".format(this.def(inchans, filterenv, pitchenv, simple)).postln;
 
-		this.getControlDict(inchans, filterenv, pitchenv).keysValuesDo{|key, ctrl|
+		this.getControlDict(inchans, filterenv, pitchenv, simple).keysValuesDo{|key, ctrl|
 			"\t\\".post;
 			key.post;
 			", ".post;
@@ -271,21 +289,21 @@ AllBuf {
 		}
 	}
 
-	getControls{|inchans=1, filterenv=true, pitchenv=true| 
-		^SynthDescLib.global.at(this.def(inchans, filterenv, pitchenv)).controls
+	getControls{|inchans=1, filterenv=true, pitchenv=true, simple| 
+		^SynthDescLib.global.at(this.def(inchans, filterenv, pitchenv, simple)).controls
 	}
 
-	getControlDict{|inchans=1, filterenv=true, pitchenv=true| 
-		^SynthDescLib.global.at(this.def(inchans, filterenv, pitchenv)).controlDict
+	getControlDict{|inchans=1, filterenv=true, pitchenv=true, simple| 
+		^SynthDescLib.global.at(this.def(inchans, filterenv, pitchenv, simple)).controlDict
 	}
 
-	getControlNames{|inchans=1, filterenv=true, pitchenv=true| 
-		^SynthDescLib.global.at(this.def(inchans, filterenv, pitchenv)).controlNames
+	getControlNames{|inchans=1, filterenv=true, pitchenv=true, simple| 
+		^SynthDescLib.global.at(this.def(inchans, filterenv, pitchenv, simple)).controlNames
 	}
 
 	// @TODO the defs still don't have specs
-	getSpecs{|inchans=1, filterenv=true, pitchenv=true| 
-		^SynthDescLib.global.at(this.def(inchans, filterenv, pitchenv)).specs
+	getSpecs{|inchans=1, filterenv=true, pitchenv=true, simple| 
+		^SynthDescLib.global.at(this.def(inchans, filterenv, pitchenv, simple)).specs
 	}
 
 }
