@@ -91,4 +91,24 @@ b.numChannels;
 	 \cutoff, Pexprand(40.0,20000.0),
 	 ).play
 )
+
+// Used with PolyBuf
+// Install:
+Quarks.install("PolyBuf")
+
+
+// Sequence all samples in b in a random order, playing them in full length
+b = BufFiles.new(s, "frokostsamples");
+
+Pdef(\madpat1, 
+	Pbind(
+		\instrument, a.def(2, simple: true),
+		\buffer, b.asPxrand(b.numBuffers),
+		\loop, 0,
+		\rate, 1,
+		\dur, Pfunc({|ev| ev[\rate].reciprocal * ev[\buffer].duration}),
+		\amp, 0.85
+	)
+).play;
+
 ::
