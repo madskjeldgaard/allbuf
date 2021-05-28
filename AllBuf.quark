@@ -1,11 +1,11 @@
 (
   name: "AllBuf",
   summary: "SynthDef factory producing buffer player synths for arbitrary amounts of input and output channels",
-  version: "0.4",
+  version: "0.5",
   schelp: "AllBuf.schelp",
   dependencies: ["AutoPan"],
   license: "GNU GPL v3.0",
   copyright: "madskjeldgaard",
-  ext_dependency: "",
+  ext_dependency: nil,
   url: "https://github.com/madskjeldgaard/allbuf"
 )
