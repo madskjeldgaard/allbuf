@@ -1,34 +1,32 @@
-/*
-
-@TODO:
-- instead of booleans, a "mode" system
-
-
-*/
 AllBuf { 
-	var <inChannels, <outChannels, <modes, mode;
+	classvar <inChannels, <outChannels, <modes, mode;
 
-	*new {|maxinchans=2, outchans=2, verbose=true|
-			^super.new.init(maxinchans, outchans, verbose)
+	*new {|maxinchans=2, outchans=2, force=false, verbose=true|
+			^this.init(maxinchans, outchans, force, verbose)
 	}
 
-	init{|maxchansIn, outchans, verbose|
+	*init{|maxchansIn, outchans, force=false, verbose|
 		modes = [\normal, \pitch, \filter, \novca];
 		inChannels = maxchansIn ? 2;
 		outChannels = outchans ? 2;
 
-		(1..maxchansIn).do{|inchan|
+		this.regenerateSynthDefs(maxchansIn, inChannels, outChannels, verbose, force);
+		
+	}
 
+	*regenerateSynthDefs{|maxchansIn, inchans, outchans, verbose, force=false|
+		(1..maxchansIn).do{|inchan|
 			modes.do{|m|
-				this.addSynth(inchan, outchans, mode: m, verbose: verbose);
+				this.addSynth(inchan, outchans, mode: m, forceAdd: force, verbose: verbose);
 			}
 		};
 
 	}
 
-	def{|inchans=1, mode| 
+	*def{|inchans=1, mode| 
 		var basename, suffix;
 
+		if(mode.isNil, { "No mode chosen".error; ^this });
 		if(modes.indexOfEqual(mode).isNil, {
 			"AllBuf mode % does not exist".format(mode).error;
 		}, {
@@ -44,18 +42,16 @@ AllBuf {
 		^basename.asSymbol
 	}
 
-	addSynth{
+	*addSynth{
 		arg inchans=2,
 			outchans=2,
 			mode,
+			forceAdd=false,
 			verbose=false;
 
 		var pitchEnv, lpf, filterEnv, vca;
 		var name, synthfunc;
 
-		verbose.if({ 
-			"Creating AllBuf synth for mode %".format(mode).postln 
-		});
 
 		// This is where the synthdef configuration is done
 		// @TODO rewrite this to use dicts for configurations instead
@@ -90,31 +86,40 @@ AllBuf {
 			mode: mode
 		);
 
-		synthfunc = this.synthFunc(
-			inchans: inchans, 
-			outchans: outchans, 
-			lpf: lpf, 
-			filterEnv: filterEnv, 
-			pitchEnv: pitchEnv,
-			vca: vca
-		);
+		// Only generate if forced to or if it does not exist in synthdesclib
+		if(forceAdd or: { SynthDescLib.global.at(name.asSymbol).isNil }, {
 
-		verbose.if({
-			"Making SynthDef '%'".format(name).postln;
-			"inchans: %, outchans: %".format(inchans,outchans).postln;
-			"Mode: %".format(mode).postln;
+			verbose.if({ 
+				"Creating AllBuf synth for mode %".format(mode).postln 
+			});
+
+			synthfunc = this.synthFunc(
+				inchans: inchans, 
+				outchans: outchans, 
+				lpf: lpf, 
+				filterEnv: filterEnv, 
+				pitchEnv: pitchEnv,
+				vca: vca
+			);
+
+			verbose.if({
+				"Making SynthDef '%'".format(name).postln;
+				"inchans: %, outchans: %".format(inchans,outchans).postln;
+				"Mode: %".format(mode).postln;
+			});
+
+			// Make and add the SynthDef
+			SynthDef.new(name.postln, synthfunc).store;
+
+			verbose.if({
+				this.postArguments(inchans, mode);
+				"----------".postln;
+			});
+
 		});
-
-		// Make and add the SynthDef
-		SynthDef.new(name.postln, synthfunc).add;
-
-		verbose.if({
-			this.postArguments(inchans, mode);
-			"----------".postln;
-		})
 	}
 
-	synthFunc{|inchans=1, outchans=2, lpf=true, filterEnv=true, pitchEnv=true, vca=false|
+	*synthFunc{|inchans=1, outchans=2, lpf=true, filterEnv=true, pitchEnv=true, vca=false|
 		var func = if(vca.not, {
 			// Simple, non enveloped synth
 			// Lifetime detertmined by the PlayBuf doneaction
@@ -142,7 +147,7 @@ AllBuf {
 		^func
 	}	
 
-	panFunc{|inchans=1, outchans=2|
+	*panFunc{|inchans=1, outchans=2|
 		var panfunc = case
 		{(inchans == 1).and(outchans == 1)} { 
 			{|sig| sig }
@@ -217,7 +222,7 @@ AllBuf {
 		^panfunc
 	}
 
-	envFunc{
+	*envFunc{
 		var envfunc = {|dur=1, attack=0.1, sustain=1, release=0.9, curve=4|
 			EnvGen.kr(
 				Env.perc(
@@ -236,7 +241,7 @@ AllBuf {
 		^envfunc
 	}
 
-	filterFunc{|lpf=true, filterEnv=true|
+	*filterFunc{|lpf=true, filterEnv=true|
 		var filterfunc = if(lpf, 
 			{
 				if(filterEnv,
@@ -265,7 +270,7 @@ AllBuf {
 		^filterfunc
 	}
 
-	bufPlayerFunc{|inchans, pitchEnv=true|
+	*bufPlayerFunc{|inchans, pitchEnv=true|
 		var bufplayerfunc = if(pitchEnv, 
 			{
 				{|env, buffer, rate=1, trigger=1, start=0, loop=1, pitchenv=0.5, doneAction=0|
@@ -301,7 +306,7 @@ AllBuf {
 		^bufplayerfunc
 	}
 
-	postArguments{|inchans=1, mode|
+	*postArguments{|inchans=1, mode|
 		"SynthDef % has the following control keys:".format(this.def(inchans, mode)).postln;
 
 		this.getControlDict(inchans, mode).keysValuesDo{|key, ctrl|
@@ -312,20 +317,20 @@ AllBuf {
 		}
 	}
 
-	getControls{|inchans=1, mode| 
+	*getControls{|inchans=1, mode| 
 		^SynthDescLib.global.at(this.def(inchans, mode)).controls
 	}
 
-	getControlDict{|inchans=1, mode| 
+	*getControlDict{|inchans=1, mode| 
 		^SynthDescLib.global.at(this.def(inchans, mode)).controlDict
 	}
 
-	getControlNames{|inchans=1, mode| 
+	*getControlNames{|inchans=1, mode| 
 		^SynthDescLib.global.at(this.def(inchans, mode)).controlNames
 	}
 
 	// @TODO the defs still don't have specs
-	getSpecs{|inchans=1, mode| 
+	*getSpecs{|inchans=1, mode| 
 		^SynthDescLib.global.at(this.def(inchans, mode)).specs
 	}
 
